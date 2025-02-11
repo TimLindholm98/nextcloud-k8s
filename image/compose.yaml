@@ -1,0 +1,65 @@
+services:
+  # Note: PostgreSQL is an external service. You can find more information about the configuration here:
+  # https://hub.docker.com/_/postgres
+  db:
+    # Note: Check the recommend version here: https://docs.nextcloud.com/server/latest/admin_manual/installation/system_requirements.html#server
+    image: postgres:alpine
+    restart: always
+    volumes:
+      - db:/var/lib/postgresql/data:Z
+    env_file:
+      - nextcloud.ini
+
+  # Note: Redis is an external service. You can find more information about the configuration here:
+  # https://hub.docker.com/_/redis
+  redis:
+    image: redis:alpine
+    restart: always
+
+  nextcloud:
+    image: nextcloud-k8s:fpm
+    restart: always
+    volumes:
+      - nextcloud:/var/www/html:z
+      # NOTE: The `volumes` config of the `cron` and `app` containers must match
+      - type: bind
+        source: ./php-config/nextcloud.ini
+        target: /usr/local/etc/php/conf.d/custom-nextcloud.ini
+      - type: bind
+        source: ./php-config/opcache-recommended.ini
+        target: /usr/local/etc/php/conf.d/custom-opcache-recommended.ini
+      - type: bind
+        source: ./php-config/docker-php-ext-apcu.ini
+        target: /usr/local/etc/php/conf.d/custom-docker-php-ext-apcu.ini
+      - type: bind
+        source: ./php-config/docker-php-ext-igbinary.ini
+        target: /usr/local/etc/php/conf.d/custom-ocker-php-ext-igbinary.ini
+      - type: bind
+        source: ./php-config/redis-session.ini
+        target: /usr/local/etc/php/conf.d/custom-redis-session.ini
+    env_file:
+      - nextcloud.ini
+    depends_on:
+      - db
+      - redis
+
+  # Note: Nginx is an external service. You can find more information about the configuration here:
+  # https://hub.docker.com/_/nginx/
+  web:
+    image: nginx:alpine-slim
+    restart: always
+    ports:
+      - 127.0.0.1:8080:80
+    volumes:
+      # https://docs.nextcloud.com/server/latest/admin_manual/installation/nginx.html
+      - type: bind
+        source: ./web/nginx.conf
+        target: /etc/nginx/nginx.conf
+      # NOTE: The `volumes` included below should match those of the `app` container (unless you know what you're doing)
+      - nextcloud:/var/www/html:z,ro
+    depends_on:
+      - app
+
+volumes:
+  db:
+  nextcloud:

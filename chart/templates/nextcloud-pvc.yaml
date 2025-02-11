@@ -1,0 +1,19 @@
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nextcloud-data
+  namespace: {{ .Release.Namespace }}
+spec:
+  {{- if .Values.nextcloud.storage.storageClass }}
+  storageClassName: {{ .Values.nextcloud.storage.storageClass }}
+  {{- end }}
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      {{- if .Values.nextcloud.storage.size }}
+      storage: {{ .Values.nextcloud.storage.size }}
+      {{- else}}
+      storage: 10Gi
+      {{- end }}

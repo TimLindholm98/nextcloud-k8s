@@ -1,0 +1,124 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nextcloud
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: {{ .Values.nextcloud.replicaCount }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: nextcloud
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: nextcloud
+    spec:
+      securityContext:
+        runAsUser: 33
+        runAsGroup: 33
+        fsGroup: 33
+      initContainers:
+        # TODO: Replace check-db-ready and check-s3-access with a single initcontainer.
+        - name: check-db-ready
+          image: postgres
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "100m"
+              memory: "128Mi"
+          command: [
+              "sh",
+              "-c",
+              "export PGPASSWORD=$POSTGRES_PASSWORD && until pg_isready -h $POSTGRES_HOST -p $POSTGRES_PORT -U $POSTGRES_USER;
+              do echo waiting for database; sleep 2; done;",
+            ]
+          env: 
+            {{ include "postgresEnv" . | nindent 12 }}
+        - name: check-s3-access
+          image: minio/mc:latest
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+          env:
+            - name: MC_CONFIG_DIR
+              value: /tmp
+            {{ include "objectstoreEnv" . | nindent 12 }}
+          command: [
+              "sh",
+              "-c",
+              'until (mc alias set mys3 http://${OBJECTSTORE_HOST}:${OBJECTSTORE_PORT} ${OBJECTSTORE_KEY} ${OBJECTSTORE_SECRET} &&
+              mc ls mys3/${OBJECTSTORE_BUCKET}); do
+              echo "Waiting for S3 access...";
+              sleep 5;
+              done',
+            ]
+        - name: nextcloud-directory-fix
+          image: timpa0130/nextcloud-k8s:{{ .Values.nextcloudImageTag}}
+          imagePullPolicy: IfNotPresent
+          {{- if .Values.rootNeededForDirectoryFix }}
+          securityContext:
+            runAsUser: 0
+          {{- end }}
+          command: [
+            "sh",
+            "-c",
+            "mkdir -p /data/ncdata /data/html &&
+            {{- if .Values.rootNeededForDirectoryFix }}
+            chown 33:33 /data/ncdata /data/html &&
+            {{- end }}
+            chmod 770 /data/ncdata /data/html"
+          ]
+          volumeMounts:
+            - name: nextcloud-data
+              mountPath: /data
+      containers:
+        - name: nextcloud
+          image: timpa0130/nextcloud-k8s:{{ .Values.nextcloudImageTag}}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 9000
+              name: php-fpm
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "1Gi"
+            limits:
+              cpu: "1500m"
+              memory: "2Gi"
+          env:
+            {{ include "redisEnv" . | nindent 12 }}
+            {{ include "postgresEnv" . | nindent 12 }}
+            {{ include "objectstoreEnv" . | nindent 12 }}
+            {{ include "nextcloudDirectories" . | nindent 12 }}
+            {{ include "nextcloudCredentials" . | nindent 12 }}
+            {{ include "trustedDomains" . | nindent 12 }}
+            {{ include "trustedProxies" . | nindent 12 }}
+          volumeMounts:
+            {{/* Folders with persistent data */}}
+            - name: nextcloud-data
+              mountPath: /mnt/ncdata
+              subPath: ncdata
+            - name: nextcloud-data
+              mountPath: /var/www/html
+              subPath: html
+            {{/* php config files */}}
+            {{- range $path, $content := .Files.Glob "files/php-config/*" }}
+            - name: nextcloud-php-config
+              mountPath: /usr/local/etc/php/conf.d/custom-{{ base $path }}
+              subPath: {{ base $path }}
+            {{- end }}
+      volumes:
+        - name: nextcloud-data
+          persistentVolumeClaim:
+            claimName: nextcloud-data
+        - name: nextcloud-php-config
+          configMap:
+            name: nextcloud-php-config
+            defaultMode: 420

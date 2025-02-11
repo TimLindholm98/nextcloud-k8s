@@ -1,0 +1,721 @@
+---
+# Source: nextcloud/templates/nextcloud-php-config.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nextcloud-php-config
+  namespace: nextcloud
+data:
+  nextcloud.ini: |
+    memory_limit=512M
+    upload_max_filesize=512M
+    post_max_size=512M
+  opcache-recommended.ini: |
+    opcache.enable=1
+    opcache.interned_strings_buffer=32
+    opcache.max_accelerated_files=10000
+    opcache.memory_consumption=128
+    opcache.save_comments=1
+    opcache.revalidate_freq=60
+    opcache.jit=1255
+    opcache.jit_buffer_size=128M
+  php-ext-acpu.ini: |
+    apc.enable_cli=1
+  php-ext-igbinary.ini: |
+    apc.serializer=igbinary
+    session.serialize_handler=igbinary
+  redis-session.ini: |
+    session.save_handler = redis
+    session.save_path = "tcp://redis:6379?auth[]=nextcloud123"
+    redis.session.locking_enabled = 1
+    redis.session.lock_retries = -1
+    redis.session.lock_wait_time = 10000
+---
+# Source: nextcloud/templates/nginx-conf.yaml
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-conf
+  namespace: nextcloud
+data:
+  nginx.conf: |
+    worker_processes auto;
+    
+    error_log  /dev/stderr warn;
+    pid        /tmp/nginx.pid;
+    
+    
+    events {
+        worker_connections  1024;
+    }
+    
+    
+    http {
+        # https://github.com/nginx/docker-nginx-unprivileged?tab=readme-ov-file#troubleshooting-tips
+        client_body_temp_path /tmp/client_temp;
+        proxy_temp_path       /tmp/proxy_temp_path;
+        fastcgi_temp_path     /tmp/fastcgi_temp;
+        uwsgi_temp_path       /tmp/uwsgi_temp;
+        scgi_temp_path        /tmp/scgi_temp;
+    
+        include mime.types;
+        default_type  application/octet-stream;
+        types {
+            text/javascript mjs;
+            application/wasm;
+        }
+    
+        log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+                          '$status $body_bytes_sent "$http_referer" '
+                          '"$http_user_agent" "$http_x_forwarded_for"';
+    
+        access_log  /var/log/nginx/access.log  main;
+    
+        sendfile        on;
+        #tcp_nopush     on;
+    
+        # Prevent nginx HTTP Server Detection
+        server_tokens   off;
+    
+        keepalive_timeout  65;
+    
+        # Set the `immutable` cache control options only for assets with a cache busting `v` argument
+        map $arg_v $asset_immutable {
+            "" "";
+        default ", immutable";
+        }
+    
+        #gzip  on;
+    
+        upstream php-handler {
+            server nextcloud:9000;
+        }
+    
+        server {
+            listen 80;
+    
+            # HSTS settings
+            # WARNING: Only add the preload option once you read about
+            # the consequences in https://hstspreload.org/. This option
+            # will add the domain to a hardcoded list that is shipped
+            # in all major browsers and getting removed from this list
+            # could take several months.
+            #add_header Strict-Transport-Security "max-age=15768000; includeSubDomains; preload;" always;
+    
+            # set max upload size and increase upload timeout:
+            client_max_body_size 512M;
+            client_body_timeout 300s;
+            fastcgi_buffers 64 4K;
+    
+            # The settings allows you to optimize the HTTP2 bandwidth.
+            # See https://blog.cloudflare.com/delivering-http-2-upload-speed-improvements/
+            # for tuning hints
+            client_body_buffer_size 512k;
+    
+            # Enable gzip but do not remove ETag headers
+            gzip on;
+            gzip_vary on;
+            gzip_comp_level 4;
+            gzip_min_length 256;
+            gzip_proxied expired no-cache no-store private no_last_modified no_etag auth;
+            gzip_types application/atom+xml text/javascript application/javascript application/json application/ld+json application/manifest+json application/rss+xml application/vnd.geo+json application/vnd.ms-fontobject application/wasm application/x-font-ttf application/x-web-app-manifest+json application/xhtml+xml application/xml font/opentype image/bmp image/svg+xml image/x-icon text/cache-manifest text/css text/plain text/vcard text/vnd.rim.location.xloc text/vtt text/x-component text/x-cross-domain-policy;
+    
+            # Pagespeed is not supported by Nextcloud, so if your server is built
+            # with the `ngx_pagespeed` module, uncomment this line to disable it.
+            #pagespeed off;
+    
+            # HTTP response headers borrowed from Nextcloud `.htaccess`
+            add_header Referrer-Policy                      "no-referrer"       always;
+            add_header X-Content-Type-Options               "nosniff"           always;
+            add_header X-Frame-Options                      "SAMEORIGIN"        always;
+            add_header X-Permitted-Cross-Domain-Policies    "none"              always;
+            add_header X-Robots-Tag                         "noindex, nofollow" always;
+            add_header X-XSS-Protection                     "1; mode=block"     always;
+    
+            # Remove X-Powered-By, which is an information leak
+            fastcgi_hide_header X-Powered-By;
+    
+            # Path to the root of your installation
+            root /var/www/html;
+    
+            # Specify how to handle directories -- specifying `/index.php$request_uri`
+            # here as the fallback means that Nginx always exhibits the desired behaviour
+            # when a client requests a path that corresponds to a directory that exists
+            # on the server. In particular, if that directory contains an index.php file,
+            # that file is correctly served; if it doesn't, then the request is passed to
+            # the front-end controller. This consistent behaviour means that we don't need
+            # to specify custom rules for certain paths (e.g. images and other assets,
+            # `/updater`, `/ocm-provider`, `/ocs-provider`), and thus
+            # `try_files $uri $uri/ /index.php$request_uri`
+            # always provides the desired behaviour.
+            index index.php index.html /index.php$request_uri;
+    
+            # Rule borrowed from `.htaccess` to handle Microsoft DAV clients
+            location = / {
+                if ( $http_user_agent ~ ^DavClnt ) {
+                    return 302 /remote.php/webdav/$is_args$args;
+                }
+            }
+    
+            location = /robots.txt {
+                allow all;
+                log_not_found off;
+                access_log off;
+            }
+    
+            # Make a regex exception for `/.well-known` so that clients can still
+            # access it despite the existence of the regex rule
+            # `location ~ /(\.|autotest|...)` which would otherwise handle requests
+            # for `/.well-known`.
+            location ^~ /.well-known {
+                # The rules in this block are an adaptation of the rules
+                # in `.htaccess` that concern `/.well-known`.
+    
+                location = /.well-known/carddav { return 301 /remote.php/dav/; }
+                location = /.well-known/caldav  { return 301 /remote.php/da v/; }
+    
+                location /.well-known/acme-challenge    { try_files $uri $uri/ =404; }
+                location /.well-known/pki-validation    { try_files $uri $uri/ =404; }
+    
+                # Let Nextcloud's API for `/.well-known` URIs handle all other
+                # requests by passing them to the front-end controller.
+                return 301 /index.php$request_uri;
+            }
+    
+            # Rules borrowed from `.htaccess` to hide certain paths from clients
+            location ~ ^/(?:build|tests|config|lib|3rdparty|templates|data)(?:$|/)  { return 404; }
+            location ~ ^/(?:\.|autotest|occ|issue|indie|db_|console)                { return 404; }
+    
+            # Ensure this block, which passes PHP files to the PHP process, is above the blocks
+            # which handle static assets (as seen below). If this block is not declared first,
+            # then Nginx will encounter an infinite rewriting loop when it prepends `/index.php`
+            # to the URI, resulting in a HTTP 500 error response.
+            location ~ \.php(?:$|/) {
+                # Required for legacy support
+                rewrite ^/(?!index|remote|public|cron|core\/ajax\/update|status|ocs\/v[12]|updater\/.+|ocs-provider\/.+|.+\/richdocumentscode(_arm64)?\/proxy) /index.php$request_uri;
+    
+                fastcgi_split_path_info ^(.+?\.php)(/.*)$;
+                set $path_info $fastcgi_path_info;
+    
+                try_files $fastcgi_script_name =404;
+    
+                include fastcgi_params;
+                fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+                fastcgi_param PATH_INFO $path_info;
+                #fastcgi_param HTTPS on;
+    
+                fastcgi_param modHeadersAvailable true;         # Avoid sending the security headers twice
+                fastcgi_param front_controller_active true;     # Enable pretty urls
+                fastcgi_pass php-handler;
+    
+                fastcgi_intercept_errors on;
+                fastcgi_request_buffering off;
+    
+                fastcgi_max_temp_file_size 0;
+            }
+    
+            # Serve static files
+            location ~ \.(?:css|js|mjs|svg|gif|ico|jpg|png|webp|wasm|tflite|map|ogg|flac)$ {
+                try_files $uri /index.php$request_uri;
+                add_header Cache-Control "public, max-age=15778463$asset_immutable";
+                add_header Referrer-Policy                   "no-referrer"       always;
+                add_header X-Content-Type-Options            "nosniff"           always;
+                add_header X-Frame-Options                   "SAMEORIGIN"        always;
+                add_header X-Permitted-Cross-Domain-Policies "none"              always;
+                add_header X-Robots-Tag                      "noindex, nofollow" always;
+                add_header X-XSS-Protection                  "1; mode=block"     always;
+                access_log off;     # Optional: Don't log access to assets
+    
+                location ~ \.wasm$ {
+                    default_type application/wasm;
+                }
+            }
+    
+            location ~ \.(otf|woff2?)$ {
+                try_files $uri /index.php$request_uri;
+                expires 7d;         # Cache-Control policy borrowed from `.htaccess`
+                access_log off;     # Optional: Don't log access to assets
+            }
+    
+            # Rule borrowed from `.htaccess`
+            location /remote {
+                return 301 /remote.php$request_uri;
+            }
+    
+            location / {
+                try_files $uri $uri/ /index.php$request_uri;
+            }
+        }
+    }
+---
+# Source: nextcloud/templates/nextcloud-pvc.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nextcloud-data
+  namespace: nextcloud
+spec:
+  storageClassName: general
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+---
+# Source: nextcloud/templates/redis-pvc.yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: redis-pvc
+  namespace: nextcloud
+spec:
+  storageClassName: general
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+---
+# Source: nextcloud/templates/nextcloud-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: nextcloud
+  namespace: nextcloud
+spec:
+  selector:
+    app.kubernetes.io/name: nextcloud
+  ports:
+    - protocol: TCP
+      port: 9000
+      targetPort: 9000
+  type: ClusterIP
+---
+# Source: nextcloud/templates/nginx-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx
+  namespace: nextcloud
+spec:
+  selector:
+    app.kubernetes.io/name: nginx
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 80
+  type: ClusterIP
+---
+# Source: nextcloud/templates/redis-service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: nextcloud
+spec:
+  selector:
+    app.kubernetes.io/name: redis
+  ports:
+    - protocol: TCP
+      port: 6379
+      targetPort: 6379
+---
+# Source: nextcloud/templates/nextcloud-deploy.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nextcloud
+  namespace: nextcloud
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: nextcloud
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: nextcloud
+    spec:
+      securityContext:
+        runAsUser: 33
+        runAsGroup: 33
+        fsGroup: 33
+      initContainers:
+        # TODO: Replace check-db-ready and check-s3-access with a single initcontainer.
+        - name: check-db-ready
+          image: postgres
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "100m"
+              memory: "128Mi"
+          command: [
+              "sh",
+              "-c",
+              "export PGPASSWORD=$POSTGRES_PASSWORD && until pg_isready -h $POSTGRES_HOST -p $POSTGRES_PORT -U $POSTGRES_USER;
+              do echo waiting for database; sleep 2; done;",
+            ]
+          env: 
+            
+            - name: POSTGRES_HOST
+              value: nextcloud-rw.nextcloud.svc.cluster.local
+            - name: POSTGRES_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: nextcloud-nextcloud
+                  key: port
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: nextcloud-nextcloud
+                  key: user
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: nextcloud-nextcloud
+                  key: password
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: nextcloud-nextcloud
+                  key: dbname
+        - name: check-s3-access
+          image: minio/mc:latest
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "500m"
+              memory: "256Mi"
+          env:
+            - name: MC_CONFIG_DIR
+              value: /tmp
+            
+            - name: OBJECTSTORE_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: nextcloud-env
+                  key: OBJECTSTORE_HOST
+            - name: OBJECTSTORE_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: nextcloud-env
+                  key: OBJECTSTORE_PORT
+            - name: OBJECTSTORE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: nextcloud-env
+                  key: OBJECTSTORE_KEY
+            - name: OBJECTSTORE_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: nextcloud-env
+                  key: OBJECTSTORE_SECRET
+            - name: OBJECTSTORE_BUCKET
+              valueFrom:
+                secretKeyRef:
+                  name: nextcloud-env
+                  key: OBJECTSTORE_BUCKET
+          command: [
+              "sh",
+              "-c",
+              'until (mc alias set mys3 http://${OBJECTSTORE_HOST}:${OBJECTSTORE_PORT} ${OBJECTSTORE_KEY} ${OBJECTSTORE_SECRET} &&
+              mc ls mys3/${OBJECTSTORE_BUCKET}); do
+              echo "Waiting for S3 access...";
+              sleep 5;
+              done',
+            ]
+        - name: nextcloud-directory-fix
+          image: timpa0130/nextcloud-k8s:20250627-1233
+          imagePullPolicy: IfNotPresent
+          command: [
+            "sh",
+            "-c",
+            "mkdir -p /data/ncdata /data/html &&
+            chmod 770 /data/ncdata /data/html"
+          ]
+          volumeMounts:
+            - name: nextcloud-data
+              mountPath: /data
+      containers:
+        - name: nextcloud
+          image: timpa0130/nextcloud-k8s:20250627-1233
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 9000
+              name: php-fpm
+          resources:
+            requests:
+              cpu: "500m"
+              memory: "1Gi"
+            limits:
+              cpu: "1500m"
+              memory: "2Gi"
+          env:
+            
+            - name: REDIS_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: nextcloud-env
+                  key: REDIS_HOST
+            - name: REDIS_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: nextcloud-env
+                  key: REDIS_PORT
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: nextcloud-env
+                  key: REDIS_PASSWORD
+            
+            - name: POSTGRES_HOST
+              value: nextcloud-rw.nextcloud.svc.cluster.local
+            - name: POSTGRES_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: nextcloud-nextcloud
+                  key: port
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: nextcloud-nextcloud
+                  key: user
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: nextcloud-nextcloud
+                  key: password
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: nextcloud-nextcloud
+                  key: dbname
+            
+            - name: OBJECTSTORE_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: nextcloud-env
+                  key: OBJECTSTORE_HOST
+            - name: OBJECTSTORE_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: nextcloud-env
+                  key: OBJECTSTORE_PORT
+            - name: OBJECTSTORE_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: nextcloud-env
+                  key: OBJECTSTORE_KEY
+            - name: OBJECTSTORE_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: nextcloud-env
+                  key: OBJECTSTORE_SECRET
+            - name: OBJECTSTORE_BUCKET
+              valueFrom:
+                secretKeyRef:
+                  name: nextcloud-env
+                  key: OBJECTSTORE_BUCKET
+            
+            - name: NEXTCLOUD_DIRECTORY
+              value: /var/www/html
+            - name: DATA_DIRECTORY
+              value: /mnt/ncdata
+            
+            - name: NEXTCLOUD_ADMIN_USER
+              valueFrom:
+                secretKeyRef:
+                  name: nextcloud-env
+                  key: NEXTCLOUD_ADMIN_USER
+            - name: NEXTCLOUD_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: nextcloud-env
+                  key: NEXTCLOUD_ADMIN_PASSWORD
+            
+            - name: TRUSTED_DOMAINS
+              value: "nextcloud.local localhost "
+            
+            - name: TRUSTED_PROXIES
+              value: "10.0.0.0/24"
+          volumeMounts:
+            
+            - name: nextcloud-data
+              mountPath: /mnt/ncdata
+              subPath: ncdata
+            - name: nextcloud-data
+              mountPath: /var/www/html
+              subPath: html
+            
+            - name: nextcloud-php-config
+              mountPath: /usr/local/etc/php/conf.d/custom-nextcloud.ini
+              subPath: nextcloud.ini
+            - name: nextcloud-php-config
+              mountPath: /usr/local/etc/php/conf.d/custom-opcache-recommended.ini
+              subPath: opcache-recommended.ini
+            - name: nextcloud-php-config
+              mountPath: /usr/local/etc/php/conf.d/custom-php-ext-acpu.ini
+              subPath: php-ext-acpu.ini
+            - name: nextcloud-php-config
+              mountPath: /usr/local/etc/php/conf.d/custom-php-ext-igbinary.ini
+              subPath: php-ext-igbinary.ini
+            - name: nextcloud-php-config
+              mountPath: /usr/local/etc/php/conf.d/custom-redis-session.ini
+              subPath: redis-session.ini
+      volumes:
+        - name: nextcloud-data
+          persistentVolumeClaim:
+            claimName: nextcloud-data
+        - name: nextcloud-php-config
+          configMap:
+            name: nextcloud-php-config
+            defaultMode: 420
+---
+# Source: nextcloud/templates/nginx-deploy.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx
+  namespace: nextcloud
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: nginx
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: nginx
+    spec:
+      securityContext:
+        runAsUser: 33
+        fsGroup: 33
+      containers:
+        - name: nginx
+          image: timpa0130/nextcloud-k8s-nginx:latest
+          ports:
+            - containerPort: 80
+              name: nginx
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          volumeMounts:
+            - name: nginx-conf
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+            - name: nextcloud-data
+              mountPath: /mnt/ncdata
+              subPath: ncdata
+            - name: nextcloud-data
+              mountPath: /var/www/html
+              subPath: html
+            - name: nginx-tmp
+              mountPath: /tmp
+      volumes:
+        - name: nextcloud-data
+          persistentVolumeClaim:
+            claimName: nextcloud-data
+        - name: nginx-tmp
+          emptyDir: {}
+        - name: nginx-conf
+          configMap:
+            name: nginx-conf
+---
+# Source: nextcloud/templates/redis-deploy.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  namespace: nextcloud
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: redis
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: redis
+    spec:
+      containers:
+        - name: redis
+          image: bitnami/redis:7.4
+          env:
+            
+            - name: REDIS_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: nextcloud-env
+                  key: REDIS_HOST
+            - name: REDIS_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: nextcloud-env
+                  key: REDIS_PORT
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: nextcloud-env
+                  key: REDIS_PASSWORD
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              cpu: "1000m"
+              memory: "512Mi"
+          ports:
+            - containerPort: 6379
+          livenessProbe:
+            tcpSocket:
+              port: 6379
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            tcpSocket:
+              port: 6379
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          volumeMounts:
+            - name: redis-data
+              mountPath: /data
+      volumes:
+        - name: redis-data
+          persistentVolumeClaim:
+            claimName: redis-pvc
+---
+# Source: nextcloud/templates/extras/cetificate.yaml
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: nextcloud-tls
+  namespace: nextcloud
+spec:
+  secretName: nextcloud-tls
+  issuerRef:
+    name: selfsigned-cluster-issuer
+    kind: ClusterIssuer
+    group: cert-manager.io
+  dnsNames:
+    - nextcloud.local
+---
+# Source: nextcloud/templates/cloudnativepg-cluster.yaml
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: nextcloud
+  namespace: nextcloud
+spec:
+  instances: 3
+  bootstrap:
+    initdb:
+      database: nextcloud
+      owner: nextcloud

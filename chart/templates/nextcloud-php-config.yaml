@@ -1,0 +1,11 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nextcloud-php-config
+  namespace: {{ .Release.Namespace }}
+data:
+{{- range $path, $content := .Files.Glob "files/php-config/*" }}
+  {{ base $path }}: |
+{{ tpl ($content | toString) $ | indent 4 }}
+{{- end }}

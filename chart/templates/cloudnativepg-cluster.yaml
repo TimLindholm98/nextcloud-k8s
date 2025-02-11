@@ -1,0 +1,41 @@
+{{- with .Values.cloudnativepg }}
+{{- if .enabled }}
+---
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: {{ .databaseName }}
+  namespace: {{ $.Release.Namespace }}
+  annotations:
+    cnpg.io/reload: "true"
+spec:
+  {{- if .cluster }}
+  instances: 3
+  {{- else }}
+  instances: 1
+  {{- end }}
+  resources:
+    requests:
+      memory: "1024Mi"
+      cpu: 1
+    limits:
+      memory: "1024Mi"
+      cpu: 1
+  {{- if and .storageClass .storageSize }}
+  wal:
+    storageClass: {{ .storageClass }}
+    size: {{ .storageSize }}
+  storage:
+    storageClass: {{ .storageClass }}
+    size: {{ .storageSize }}
+  {{- end }}
+  {{- if and .databaseName .databaseUser }}
+  bootstrap:
+    initdb:
+      database: {{ .databaseName }}
+      owner: {{ .databaseUser }}
+  {{- end }}
+
+---
+{{- end }}
+{{- end }}

@@ -1,0 +1,94 @@
+# If you want to use your own database, set cloudnativepg.enabled to false.
+# Then configure the enviroment variables by yourself in the nextcloud-env secret, the variables are:
+# - POSTGRES_HOST
+# - POSTGRES_PORT
+# - POSTGRES_DB
+# - POSTGRES_USER
+# - POSTGRES_PASSWORD
+cloudnativepg:
+  enabled: true
+  cluster: true
+  databaseName: nextcloud
+  databaseUser: nextcloud
+  storage:
+    storageClass: database
+    size: 10Gi
+
+
+
+# Environment variables:
+# - REDIS_HOST
+# - REDIS_PORT
+# - REDIS_PASSWORD
+redis:
+  enabled: true
+  persistence: false
+
+
+
+# Required values
+nextcloudDomain: &nextcloudDomain nextcloud.local
+nextcloudImageTag: 20250629-1529
+nginxImageTag: latest
+
+# Nextcloud configuration
+rootNeededForDirectoryFix: false
+nextcloud:
+  # Environment variables:
+  # - TRUSTED_DOMAINS
+  # - TRUSTED_PROXIES
+  trustedDomains:
+    - *nextcloudDomain
+    - localhost
+  trustedProxies:
+    - 10.0.0.0/24
+  # Redis is required for nextcloud to work with more than one instance.
+  replicaCount: 
+  # Configure the certificate for the ingress outside of the chart.
+  ingress:
+    enabled: true
+    className: ""
+    tlsSecretName: nextcloud-tls
+  storage:
+    storageClass: general
+    size: 10Gi
+
+
+
+# Collabora configuration
+collaboraDomain: &collaboraDomain collab.local
+collabora:
+  enabled: false
+  replicaCount: 1
+  ingress:
+    enabled: true
+    className: "haproxy"
+    annotations:
+      haproxy.org/timeout-tunnel: "3600s"
+      haproxy.org/backend-config-snippet: |
+        balance url_param WOPISrc check_post
+        hash-type consistent
+    tls:
+      - secretName: collabora-cert
+        hosts:
+          - *collaboraDomain
+    hosts:
+      - host: *collaboraDomain
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+  autoscaling:
+    enabled: false
+  collabora:
+    server_name: *collaboraDomain
+    aliasgroups:
+      - host: "https://*nextcloudDomain:443"
+    extra_params: --o:ssl.enable=false --o:ssl.termination=true
+    # for production enviroment we recommend appending `extra_params` with `--o:num_prespawn_children=4`. It defines number of child processes to keep started in advance and waiting for new clients
+  resources:
+    limits:
+      cpu: "1800m"
+      memory: "2000Mi"
+    requests:
+      cpu: "1800m"
+      memory: "2000Mi"

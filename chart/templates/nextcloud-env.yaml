@@ -1,0 +1,35 @@
+{{/*
+This should be a secret containing the environment variables for the nextcloud deployment.
+Some values you can define in the values.yaml
+
+*Dont change the NEXTCLOUD_DIRECTORY and DATA_DIRECTORY, I need to rework this*
+
+
+All the variables with examples:
+
+  TRUSTED_DOMAINS: localhost nextcloud.local
+  TRUSTED_PROXIES: 10.0.0.0/24
+
+  OBJECTSTORE_HOST: 192.168.1.5
+  OBJECTSTORE_PORT: "9000"
+  OBJECTSTORE_BUCKET: nextcloud123
+  OBJECTSTORE_KEY: nextcloud
+  OBJECTSTORE_SECRET: nextcloud123
+
+  REDIS_HOST: redis
+  REDIS_PORT: "6379"
+  REDIS_PASSWORD: redis123
+
+  POSTGRES_HOST: postgres-rw
+  POSTGRES_PORT: "5432"
+  POSTGRES_DB: app
+  POSTGRES_USER: app
+  POSTGRES_PASSWORD: nextcloud123
+  
+  NEXTCLOUD_ADMIN_USER: administrator
+  NEXTCLOUD_ADMIN_PASSWORD: nextcloud123
+  NEXTCLOUD_DIRECTORY: /var/www/html
+  DATA_DIRECTORY: /mnt/ncdata
+  
+  
+*/}}

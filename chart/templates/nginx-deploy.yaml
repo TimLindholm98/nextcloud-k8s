@@ -1,0 +1,53 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx
+  namespace: {{ .Release.Namespace }}
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: nginx
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: nginx
+    spec:
+      securityContext:
+        runAsUser: 33
+        fsGroup: 33
+      containers:
+        - name: nginx
+          image: timpa0130/nextcloud-k8s-nginx:{{ .Values.nginxImageTag}}
+          ports:
+            - containerPort: 80
+              name: nginx
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          volumeMounts:
+            - name: nginx-conf
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+            - name: nextcloud-data
+              mountPath: /mnt/ncdata
+              subPath: ncdata
+            - name: nextcloud-data
+              mountPath: /var/www/html
+              subPath: html
+            - name: nginx-tmp
+              mountPath: /tmp
+      volumes:
+        - name: nextcloud-data
+          persistentVolumeClaim:
+            claimName: nextcloud-data
+        - name: nginx-tmp
+          emptyDir: {}
+        - name: nginx-conf
+          configMap:
+            name: nginx-conf
