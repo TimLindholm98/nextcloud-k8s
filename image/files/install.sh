@@ -109,6 +109,9 @@ install_nextcloud() {
     --admin-user "$NEXTCLOUD_ADMIN_USER" \
     --admin-pass "$NEXTCLOUD_ADMIN_PASSWORD" \
     --data-dir "$DATA_DIRECTORY"
+
+  # As kubernetes pvc is used, we can disable the check_data_directory_permissions.
+  sed -i "/^);$/i\\  'check_data_directory_permissions' => false," ${NEXTCLOUD_DIRECTORY}/config/config.php
 }
 
 configure_nextcloud() {
