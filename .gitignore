@@ -1,5 +1,5 @@
 secrets/unsealed
-helm/renderd.yaml
-helm/requirements.lock
-helm/charts/*
+chart/renderd.yaml
+chart/requirements.lock
+chart/charts/*
 
