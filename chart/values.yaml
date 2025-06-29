@@ -28,8 +28,8 @@ redis:
 
 # Required values
 nextcloudDomain: &nextcloudDomain nextcloud.local
-nextcloudImageTag: 20250629-1529
-nginxImageTag: latest
+nextcloudImageTag: 20250629-1552
+nginxImageTag: 20250629-1552
 
 # Nextcloud configuration
 rootNeededForDirectoryFix: false
