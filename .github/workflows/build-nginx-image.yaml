@@ -1,4 +1,4 @@
-name: Build Nextcloud Image
+name: Build Nginx Image
 
 on:
   push:
