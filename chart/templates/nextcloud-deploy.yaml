@@ -44,7 +44,7 @@ spec:
               cpu: "100m"
               memory: "128Mi"
             limits:
-              cpu: "500m"
+              cpu: "200m"
               memory: "256Mi"
           env:
             - name: MC_CONFIG_DIR
@@ -62,18 +62,11 @@ spec:
         - name: nextcloud-directory-fix
           image: timpa0130/nextcloud-k8s:{{ .Values.nextcloudImageTag}}
           imagePullPolicy: IfNotPresent
-          {{- if .Values.rootNeededForDirectoryFix }}
-          securityContext:
-            runAsUser: 0
-          {{- end }}
           command: [
             "sh",
             "-c",
-            "mkdir -p /data/ncdata /data/html &&
-            {{- if .Values.rootNeededForDirectoryFix }}
-            chown 33:33 /data/ncdata /data/html &&
-            {{- end }}
-            chmod 770 /data/ncdata /data/html"
+            "umask 0077 && mkdir -p /data/ncdata /data/html &&
+            ls -la /data/ncdata /data/html"
           ]
           volumeMounts:
             - name: nextcloud-data
@@ -90,7 +83,7 @@ spec:
               cpu: "500m"
               memory: "1Gi"
             limits:
-              cpu: "1500m"
+              cpu: "2000m"
               memory: "2Gi"
           env:
             {{ include "redisEnv" . | nindent 12 }}

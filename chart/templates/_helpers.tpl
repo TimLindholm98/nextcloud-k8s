@@ -46,22 +46,22 @@
 - name: POSTGRES_PORT
   valueFrom:
     secretKeyRef:
-      name: {{ .Values.cloudnativepg.databaseName }}-{{ .Values.cloudnativepg.databaseName }}
+      name: {{ .Values.cloudnativepg.databaseName }}-app
       key: port
 - name: POSTGRES_USER
   valueFrom:
     secretKeyRef:
-      name: {{ .Values.cloudnativepg.databaseName }}-{{ .Values.cloudnativepg.databaseName }}
+      name: {{ .Values.cloudnativepg.databaseName }}-app
       key: user
 - name: POSTGRES_PASSWORD
   valueFrom:
     secretKeyRef:
-      name: {{ .Values.cloudnativepg.databaseName }}-{{ .Values.cloudnativepg.databaseName }}
+      name: {{ .Values.cloudnativepg.databaseName }}-app
       key: password
 - name: POSTGRES_DB
   valueFrom:
     secretKeyRef:
-      name: {{ .Values.cloudnativepg.databaseName }}-{{ .Values.cloudnativepg.databaseName }}
+      name: {{ .Values.cloudnativepg.databaseName }}-app
       key: dbname
 {{- end -}}
 {{- end -}}

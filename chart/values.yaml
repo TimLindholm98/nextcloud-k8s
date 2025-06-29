@@ -1,3 +1,4 @@
+
 # If you want to use your own database, set cloudnativepg.enabled to false.
 # Then configure the enviroment variables by yourself in the nextcloud-env secret, the variables are:
 # - POSTGRES_HOST
@@ -8,7 +9,7 @@
 cloudnativepg:
   enabled: true
   cluster: true
-  databaseName: nextcloud
+  databaseName: db
   databaseUser: nextcloud
   storage:
     storageClass: database
@@ -32,7 +33,6 @@ nextcloudImageTag: 20250629-1552
 nginxImageTag: 20250629-1552
 
 # Nextcloud configuration
-rootNeededForDirectoryFix: false
 nextcloud:
   # Environment variables:
   # - TRUSTED_DOMAINS
@@ -43,14 +43,14 @@ nextcloud:
   trustedProxies:
     - 10.0.0.0/24
   # Redis is required for nextcloud to work with more than one instance.
-  replicaCount: 
+  replicaCount: 2
   # Configure the certificate for the ingress outside of the chart.
   ingress:
     enabled: true
     className: ""
     tlsSecretName: nextcloud-tls
   storage:
-    storageClass: general
+    storageClass: ""
     size: 10Gi
 
 

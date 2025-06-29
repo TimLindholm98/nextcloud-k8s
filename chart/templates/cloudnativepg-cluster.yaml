@@ -21,13 +21,21 @@ spec:
     limits:
       memory: "1024Mi"
       cpu: 1
-  {{- if and .storageClass .storageSize }}
-  wal:
-    storageClass: {{ .storageClass }}
-    size: {{ .storageSize }}
+  {{- if .storage }}
+  walStorage:
+    {{- if .storage.size }}
+    size: {{ .storage.size }}
+    {{- end }}
+    {{- if .storage.storageClass }}
+    storageClass: {{ .storage.storageClass }}
+    {{- end }}
   storage:
-    storageClass: {{ .storageClass }}
-    size: {{ .storageSize }}
+    {{- if .storage.size }}
+    size: {{ .storage.size }}
+    {{- end }}
+    {{- if .storage.storageClass }}
+    storageClass: {{ .storage.storageClass }}
+    {{- end }}
   {{- end }}
   {{- if and .databaseName .databaseUser }}
   bootstrap:

@@ -39,6 +39,7 @@ spec:
               port: 6379
             initialDelaySeconds: 5
             periodSeconds: 10
+{{- if .Values.redis.persistence }}
           volumeMounts:
             - name: redis-data
               mountPath: /data
@@ -46,4 +47,5 @@ spec:
         - name: redis-data
           persistentVolumeClaim:
             claimName: redis-pvc
+{{- end }}
 {{- end }}
