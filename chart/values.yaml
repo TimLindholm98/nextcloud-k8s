@@ -63,6 +63,7 @@ nextcloud:
 
 
 # Collabora configuration
+# This needs either haproxy or nginx ingress controller to be installed.
 collaboraDomain: &collaboraDomain collab.local
 collabora:
   enabled: false
