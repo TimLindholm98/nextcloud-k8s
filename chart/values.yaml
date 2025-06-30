@@ -15,17 +15,13 @@ cloudnativepg:
     storageClass: database
     size: 10Gi
 
-
-
-# Environment variables:
+# Required environment variables to set manually:
 # - REDIS_HOST
 # - REDIS_PORT
 # - REDIS_PASSWORD
 redis:
   enabled: true
   persistence: false
-
-
 
 # Required values
 nextcloudDomain: &nextcloudDomain nextcloud.local
@@ -34,21 +30,21 @@ nginxImageTag: 20250629-1552
 
 # Nextcloud configuration
 nextcloud:
-  # Environment variables:
-  # - TRUSTED_DOMAINS
-  # - TRUSTED_PROXIES
-  trustedDomains:
+  # Replaces the trusted_domains in the nextcloud config.php
+  trustedDomains: # Required
     - *nextcloudDomain
     - localhost
+  # Replaces the trusted_proxies in the nextcloud config.php
   trustedProxies:
     - 10.0.0.0/24
-  # Redis is required for nextcloud to work with more than one instance.
-  replicaCount: 2
+  # Redis is required to handle sessions for nextcloud to work with more than one instance.
+  replicaCount: 1
   # Configure the certificate for the ingress outside of the chart.
   ingress:
     enabled: true
-    className: ""
-    tlsSecretName: nextcloud-tls
+    # Configure the ingress tls cert through cert-manager annotation
+    annotations: {}
+    tlsSecretName: ""
   storage:
     storageClass: ""
     size: 10Gi
@@ -57,46 +53,6 @@ nextcloud:
       cpu: "300m"
       memory: "512Mi"
     limits:
-      cpu: 2
+      cpu: "1500m"
       memory: "1Gi"
-      
 
-
-# Collabora configuration
-# This needs either haproxy or nginx ingress controller to be installed.
-collaboraDomain: &collaboraDomain collab.local
-collabora:
-  enabled: false
-  replicaCount: 1
-  ingress:
-    enabled: true
-    className: "haproxy"
-    annotations:
-      haproxy.org/timeout-tunnel: "3600s"
-      haproxy.org/backend-config-snippet: |
-        balance url_param WOPISrc check_post
-        hash-type consistent
-    tls:
-      - secretName: collabora-cert
-        hosts:
-          - *collaboraDomain
-    hosts:
-      - host: *collaboraDomain
-        paths:
-          - path: /
-            pathType: ImplementationSpecific
-  autoscaling:
-    enabled: false
-  collabora:
-    server_name: *collaboraDomain
-    aliasgroups:
-      - host: "https://*nextcloudDomain:443"
-    extra_params: --o:ssl.enable=false --o:ssl.termination=true
-    # for production enviroment we recommend appending `extra_params` with `--o:num_prespawn_children=4`. It defines number of child processes to keep started in advance and waiting for new clients
-  resources:
-    limits:
-      cpu: "1800m"
-      memory: "2000Mi"
-    requests:
-      cpu: "1800m"
-      memory: "2000Mi"

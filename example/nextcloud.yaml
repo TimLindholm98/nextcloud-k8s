@@ -1,0 +1,16 @@
+
+nextcloud:
+  nextcloudDomain: &nextcloudDomain nextcloud.example.com
+  nextcloudImageTag: latest
+  nginxImageTag: latest
+
+  # Nextcloud configuration
+  nextcloud:
+    trustedDomains:
+      - *nextcloudDomain
+      - localhost
+    ingress:
+      annotations:
+        kubernetes.io/ingress.class: haproxy
+        cert-manager.io/cluster-issuer: selfsigned-cluster-issuer
+      tlsSecretName: nextcloud-tls

@@ -11,4 +11,4 @@ spec:
     kind: ClusterIssuer
     group: cert-manager.io
   dnsNames:
-    - {{ .Values.nextcloudDomain }}
+    - {{ .Values.nextcloud.nextcloudDomain }}

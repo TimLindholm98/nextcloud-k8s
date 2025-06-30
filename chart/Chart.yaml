@@ -2,9 +2,3 @@ name: nextcloud-k8s
 version: 0.0.1
 description: Nextcloud is a self-hosted file sync and share server.
 icon: https://nextcloud.com/wp-content/uploads/2021/02/cropped-favicon-1-32x32.png
-dependencies:
-  - name: collabora-online
-    alias: collabora
-    repository: https://collaboraonline.github.io/online/
-    version: 1.1.33
-    condition: collabora.enabled

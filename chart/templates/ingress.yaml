@@ -5,12 +5,10 @@ kind: Ingress
 metadata:
   name: nextcloud
   namespace: {{ .Release.Namespace }}
+  {{ if .Values.nextcloud.ingress.annotations }}
   annotations:
-    {{ if .Values.nextcloud.ingressClassName }}
-    kubernetes.io/ingress.class: {{ .Values.nextcloud.ingressClassName }}
-    {{ end }}
+  {{ .Values.nextcloud.ingress.annotations | toYaml | nindent 4 }} {{- end }}
 spec:
-  ingressClassName: haproxy
   rules:
     - host: {{ .Values.nextcloudDomain }}
       http:
@@ -22,8 +20,10 @@ spec:
                 name: nginx
                 port:
                   number: 80
+  {{ if .Values.nextcloud.ingress.tlsSecretName }}
   tls:
     - hosts:
         - {{ .Values.nextcloudDomain }}
       secretName: {{ .Values.nextcloud.ingress.tlsSecretName }}
+  {{ end }}
 {{- end }}

@@ -1,0 +1,39 @@
+
+# Collabora configuration
+# This needs either haproxy or nginx ingress controller to be installed.
+collaboraDomain: &collaboraDomain collab.local
+collabora:
+  enabled: true
+  replicaCount: 1
+  ingress:
+    enabled: true
+    className: "haproxy"
+    annotations:
+      haproxy.org/timeout-tunnel: "3600s"
+      haproxy.org/backend-config-snippet: |
+        balance url_param WOPISrc check_post
+        hash-type consistent
+    tls:
+      - secretName: collabora-cert
+        hosts:
+          - *collaboraDomain
+    hosts:
+      - host: *collaboraDomain
+        paths:
+          - path: /
+            pathType: ImplementationSpecific
+  autoscaling:
+    enabled: false
+  collabora:
+    server_name: *collaboraDomain
+    aliasgroups:
+      - host: "https://*nextcloudDomain:443"
+    extra_params: --o:ssl.enable=false --o:ssl.termination=true
+    # for production enviroment we recommend appending `extra_params` with `--o:num_prespawn_children=4`. It defines number of child processes to keep started in advance and waiting for new clients
+  resources:
+    limits:
+      cpu: "1800m"
+      memory: "2000Mi"
+    requests:
+      cpu: "1800m"
+      memory: "2000Mi"
