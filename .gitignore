@@ -2,4 +2,6 @@ secrets/unsealed
 chart/renderd.yaml
 chart/requirements.lock
 chart/charts/*
+example/charts/*
+example/requirements.lock
 
