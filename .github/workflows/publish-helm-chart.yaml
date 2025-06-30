@@ -47,8 +47,6 @@ jobs:
         run: |
           helm package chart
 
-
-
       - name: Publish chart
         shell: bash
         run: |
