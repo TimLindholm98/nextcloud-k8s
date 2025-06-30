@@ -67,19 +67,42 @@ Configuration is managed through `chart/values.yaml` and a Kubernetes secret.
 
 ### Helm Values (`values.yaml`)
 
--   `nextcloudDomain`: The primary domain for Nextcloud.
--   `nextcloudImageTag`, `nginxImageTag`: Docker image tags for the services.
--   `nextcloud.replicaCount`: Set to `1` for single-node, `>1` for HA.
--   `cloudnativepg.enabled`, `redis.enabled`, `collabora.enabled`: Toggle dependencies.
--   `cloudnativepg.cluster`: Set to `true` for a 3-node database cluster.
+- `nextcloudDomain`: The primary domain for Nextcloud.
+- `nextcloudImageTag`, `nginxImageTag`: Docker image tags for the services.
+- `nextcloud.replicaCount`: Set to `1` for single-node, `>1` for HA.
+- `cloudnativepg.enabled`, `redis.enabled`, `collabora.enabled`: Toggle dependencies.
+- `cloudnativepg.cluster`: Set to `true` for a 3-node database cluster.
 
 ### Environment Variables (`nextcloud-env` Secret)
 
 Create a `Secret` named `nextcloud-env` in the `nextcloud` namespace containing credentials for external services. Refer to `secrets/unsealed/nextcloud-environment.yaml` in the parent directory for the required keys.
 
--   **S3 Storage**: `OBJECTSTORE_HOST`, `OBJECTSTORE_PORT`, `OBJECTSTORE_BUCKET`, `OBJECTSTORE_KEY`, `OBJECTSTORE_SECRET`.
--   **Redis**: `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD`.
--   **Nextcloud Admin**: `NEXTCLOUD_ADMIN_USER`, `NEXTCLOUD_ADMIN_PASSWORD`.
+- **S3 Storage**: `OBJECTSTORE_HOST`, `OBJECTSTORE_PORT`, `OBJECTSTORE_BUCKET`, `OBJECTSTORE_KEY`, `OBJECTSTORE_SECRET`.
+- **Redis**: `REDIS_HOST`, `REDIS_PORT`, `REDIS_PASSWORD`.
+- **Nextcloud Admin**: `NEXTCLOUD_ADMIN_USER`, `NEXTCLOUD_ADMIN_PASSWORD`.
+
+##### Example config
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: nextcloud-env
+type: Opaque
+stringData:
+  OBJECTSTORE_HOST: 192.168.1.5
+  OBJECTSTORE_PORT: "9000"
+  OBJECTSTORE_BUCKET: nextcloud
+  OBJECTSTORE_KEY: nextcloud
+  OBJECTSTORE_SECRET: nextcloud123
+  REDIS_HOST: redis
+  REDIS_PORT: "6379"
+  REDIS_PASSWORD: nextcloud123
+  NEXTCLOUD_ADMIN_USER: admin
+  NEXTCLOUD_ADMIN_PASSWORD: changeme
+  # Dont change this
+  NEXTCLOUD_DIRECTORY: /var/www/html
+  DATA_DIRECTORY: /mnt/ncdata
+```
 
 ## Maintenance
 
@@ -98,24 +121,23 @@ kubectl get cluster -n nextcloud
 kubectl exec -it nextcloud-1 -n nextcloud -- psql -U nextcloud
 ```
 
-### Backups
-```bash
-# Backup PostgreSQL database
-kubectl exec -it nextcloud-1 -n nextcloud -- pg_dump -U nextcloud nextcloud > backup.sql
-```
-*Note: S3 data should be backed up using your storage provider's tools.*
-
-### Updates
-```bash
-# Update container images
-helm upgrade nextcloud ./chart -n nextcloud \
-  --set nextcloudImageTag=<new-tag> \
-  --set nginxImageTag=<new-tag>
-```
+> [!TIP]
+> If you are using cloudnative-pg add this part to your nextcloud config.php manually
+> https://docs.nextcloud.com/server/latest/admin_manual/configuration_database/replication.html
+> ```
+> 'dbreplica' => [
+>    [
+>      'user' => 'nextcloud',
+>      'password' => '<your-database-password>',
+>      'host' => 'db-ro.nextcloud.svc.cluster.local',
+>      'dbname' => 'db'
+>    ],
+>  ],
+> ```
 
 ## Troubleshooting
 
--   **Installation Fails**: Check logs of the `check-db-ready` and `check-s3-access` init containers in the Nextcloud pod.
--   **Permission Errors**: Set `rootNeededForDirectoryFix: true` in `values.yaml` if the PVC has restrictive permissions.
--   **Database Connection**: Check the status of the CloudNativePG cluster: `kubectl get cluster nextcloud -n nextcloud -o yaml`.
--   **Redis Connection**: Test connectivity with `kubectl exec -it deployment/redis -n nextcloud -- redis-cli ping`. 
+- **Installation Fails**: Check logs of the `check-db-ready` and `check-s3-access` init containers in the Nextcloud pod.
+- **Permission Errors**: Set `rootNeededForDirectoryFix: true` in `values.yaml` if the PVC has restrictive permissions.
+- **Database Connection**: Check the status of the CloudNativePG cluster: `kubectl get cluster nextcloud -n nextcloud -o yaml`.
+- **Redis Connection**: Test connectivity with `kubectl exec -it deployment/redis -n nextcloud -- redis-cli ping`.

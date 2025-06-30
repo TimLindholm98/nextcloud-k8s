@@ -52,7 +52,14 @@ nextcloud:
   storage:
     storageClass: ""
     size: 10Gi
-
+  resources:
+    requests:
+      cpu: "300m"
+      memory: "512Mi"
+    limits:
+      cpu: 2
+      memory: "1Gi"
+      
 
 
 # Collabora configuration

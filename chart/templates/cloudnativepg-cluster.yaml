@@ -20,7 +20,7 @@ spec:
       cpu: 1
     limits:
       memory: "1024Mi"
-      cpu: 2
+      cpu: 1
   {{- if .storage }}
   walStorage:
     {{- if .storage.size }}
