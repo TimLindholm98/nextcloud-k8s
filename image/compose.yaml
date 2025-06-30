@@ -8,16 +8,18 @@ services:
     volumes:
       - db:/var/lib/postgresql/data:Z
     env_file:
-      - nextcloud.ini
+      - env.ini
 
   # Note: Redis is an external service. You can find more information about the configuration here:
   # https://hub.docker.com/_/redis
   redis:
-    image: redis:alpine
+    image: bitnami/redis:8.0
+    environment:
+      - REDIS_PASSWORD=nextcloud123
     restart: always
 
   nextcloud:
-    image: nextcloud-k8s:fpm
+    image: timpa0130/nextcloud-k8s:latest
     restart: always
     volumes:
       - nextcloud:/var/www/html:z
@@ -38,27 +40,27 @@ services:
         source: ./php-config/redis-session.ini
         target: /usr/local/etc/php/conf.d/custom-redis-session.ini
     env_file:
-      - nextcloud.ini
+      - env.ini
     depends_on:
       - db
       - redis
 
   # Note: Nginx is an external service. You can find more information about the configuration here:
   # https://hub.docker.com/_/nginx/
-  web:
-    image: nginx:alpine-slim
+  nginx:
+    image: timpa0130/nextcloud-k8s-nginx:latest
     restart: always
     ports:
-      - 127.0.0.1:8080:80
+      - 8080:80
     volumes:
       # https://docs.nextcloud.com/server/latest/admin_manual/installation/nginx.html
       - type: bind
-        source: ./web/nginx.conf
+        source: ./nginx.conf
         target: /etc/nginx/nginx.conf
       # NOTE: The `volumes` included below should match those of the `app` container (unless you know what you're doing)
       - nextcloud:/var/www/html:z,ro
     depends_on:
-      - app
+      - nextcloud
 
 volumes:
   db:
