@@ -1,0 +1,58 @@
+name: Publish Chart
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "chart/Chart.yaml"
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish-chart:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup helm
+        uses: helm/setup-helm@v4
+
+      - name: Install yq
+        shell: bash
+        run: |
+          export VERSION=v4.2.0 
+          export BINARY=yq_linux_amd64
+          wget https://github.com/mikefarah/yq/releases/download/${VERSION}/${BINARY} -O /usr/local/bin/yq
+          chmod +x /usr/local/bin/yq
+
+      - name: Get chart name and version
+        shell: bash
+        run: |
+          CHART_NAME=$(yq '.name' chart/Chart.yaml)
+          CHART_VERSION=$(yq '.version' chart/Chart.yaml)
+          echo "CHART_NAME=$CHART_NAME" >> $GITHUB_ENV
+          echo "CHART_VERSION=$CHART_VERSION" >> $GITHUB_ENV
+
+      - name: Login to ghcr.io
+        shell: bash
+        run: |
+          echo ${{ secrets.GITHUB_TOKEN }} | helm registry login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Package chart
+        shell: bash
+        run: |
+          helm package chart
+
+
+
+      - name: Publish chart
+        shell: bash
+        run: |
+          helm push \
+            --password ${{ secrets.GITHUB_TOKEN }} \
+            ${{ env.CHART_NAME }}-${{ env.CHART_VERSION }}.tgz \
+            oci://ghcr.io/${{ github.repository }}
