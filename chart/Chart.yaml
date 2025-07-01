@@ -1,3 +1,4 @@
+apiVersion: v2
 name: nextcloud-k8s
 version: 0.0.1
 description: Nextcloud is a self-hosted file sync and share server.
