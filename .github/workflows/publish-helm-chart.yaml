@@ -27,13 +27,13 @@ jobs:
           export VERSION=v4.2.0 
           export BINARY=yq_linux_amd64
           wget https://github.com/mikefarah/yq/releases/download/${VERSION}/${BINARY} -O ./yq
-          chmod +x ./yq
+          chmod +x /usr/local/bin/yq
 
       - name: Get chart name and version
         shell: bash
         run: |
-          CHART_NAME=$(./yq .name chart/Chart.yaml)
-          CHART_VERSION=$(./yq .version chart/Chart.yaml)
+          CHART_NAME="$(/usr/local/bin/yq '.name' chart/Chart.yaml)"
+          CHART_VERSION="$(/usr/local/bin/yq '.version' chart/Chart.yaml)"
           echo "CHART_NAME=$CHART_NAME" >> $GITHUB_ENV
           echo "CHART_VERSION=$CHART_VERSION" >> $GITHUB_ENV
 
