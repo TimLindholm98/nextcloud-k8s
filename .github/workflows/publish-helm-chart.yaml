@@ -57,4 +57,4 @@ jobs:
           helm push \
             --password ${{ secrets.GITHUB_TOKEN }} \
             ${{ env.CHART_NAME }}-${{ env.CHART_VERSION }}.tgz \
-            oci://ghcr.io/${{ github.repository }}
+            oci://ghcr.io/${{ github.actor }}
