@@ -95,7 +95,7 @@ download_and_unpack_nextcloud() {
 
     echo "Unpacking the Nextcloud tarball to ${UNPACK_DIR}"
     # pv <some .tar.gz file> | tar -xvzf - -C <some directory>
-    pv /tmp/nextcloud.tar.bz2 | tar -xvzf - -C ${UNPACK_DIR} --strip-components=1
+    pv /tmp/nextcloud.tar.bz2 | tar -xjf - -C ${UNPACK_DIR} --strip-components=1
     echo "Done unpacking, removing tarball"
     rm /tmp/nextcloud.tar.bz2
     #tar -xjf /tmp/nextcloud.tar.bz2 -C ${UNPACK_DIR} --strip-components=1 && rm /tmp/nextcloud.tar.bz2
