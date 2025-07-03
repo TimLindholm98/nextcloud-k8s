@@ -45,3 +45,8 @@ This project provides a simplified solution for deploying Nextcloud on Kubernete
 - **[Helm Chart Documentation](chart/README.md)** - Details about the helm chart
 
 - **[Docker Image Documentation](image/README.md)** - Details about the custom Docker image.
+
+
+## TODO
+
+- [ ] CronJob

@@ -8,8 +8,13 @@ spec:
   {{- if .Values.nextcloud.storage.storageClass }}
   storageClassName: {{ .Values.nextcloud.storage.storageClass }}
   {{- end }}
+  {{- if .Values.nextcloud.storage.accessModes }}
+  accessModes:
+    {{- toYaml .Values.nextcloud.storage.accessModes | nindent 4 }}
+  {{- else }}
   accessModes:
     - ReadWriteMany
+  {{- end }}
   resources:
     requests:
       {{- if .Values.nextcloud.storage.size }}

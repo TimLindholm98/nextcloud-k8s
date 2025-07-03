@@ -11,9 +11,19 @@ spec:
       app.kubernetes.io/name: nginx
   template:
     metadata:
+      {{- if .Values.nginx.annotations }}
+      annotations:
+        {{- toYaml .Values.nginx.annotations | nindent 6 }}
+      {{- end }}
       labels:
         app.kubernetes.io/name: nginx
     spec:
+      {{- if .Values.openshiftCompatibility }}
+      serviceAccountName: nextcloud
+      automountServiceAccountToken: false
+      {{- else }}
+      automountServiceAccountToken: false
+      {{- end }}
       securityContext:
         runAsUser: 33
         fsGroup: 33

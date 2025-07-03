@@ -11,8 +11,9 @@ cloudnativepg:
   cluster: true
   databaseName: db
   databaseUser: nextcloud
+  annotations: {}
   storage:
-    storageClass: database
+    storageClass: ""
     size: 10Gi
 
 # Required environment variables to set manually:
@@ -23,13 +24,21 @@ redis:
   enabled: true
   persistence: false
 
+# Nginx configuration
+nginx:
+  annotations: {}
+
 # Required values
 nextcloudDomain: &nextcloudDomain nextcloud.local
 nextcloudImageTag: 20250629-1552
 nginxImageTag: 20250629-1552
 
+# Openshift compatibility
+openshiftCompatibility: false
+
 # Nextcloud configuration
 nextcloud:
+  annotations: {}
   # Replaces the trusted_domains in the nextcloud config.php
   trustedDomains: # Required
     - *nextcloudDomain

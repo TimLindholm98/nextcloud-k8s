@@ -6,8 +6,10 @@ kind: Cluster
 metadata:
   name: {{ .databaseName }}
   namespace: {{ $.Release.Namespace }}
+  {{- if .annotations }}
   annotations:
-    cnpg.io/reload: "true"
+    {{- toYaml .annotations | nindent 4 }}
+  {{- end }}
 spec:
   {{- if .cluster }}
   instances: 3

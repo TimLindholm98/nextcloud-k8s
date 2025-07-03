@@ -1,0 +1,77 @@
+{{- if .Values.openshiftCompatibility }}
+apiVersion: security.openshift.io/v1
+kind: SecurityContextConstraints
+metadata:
+  annotations:
+    kubernetes.io/description: SecurityContextConstraints configuration for nextcloud images
+  name: {{ .Release.Namespace }}
+allowHostDirVolumePlugin: false
+allowHostIPC: false
+allowHostNetwork: false
+allowHostPID: false
+allowHostPorts: false
+allowPrivilegedContainer: false
+readOnlyRootFilesystem: false
+fsGroup:
+  type: MustRunAs
+  ranges:
+    - min: 33
+      max: 33
+users:
+  - nextcloud
+priority: 10
+requiredDropCapabilities:
+  - MKNOD
+runAsUser:
+  type: MustRunAsRange
+  uidRangeMin: 33
+  uidRangeMax: 33
+seLinuxContext:
+  type: MustRunAs
+supplementalGroups:
+  type: RunAsAny
+volumes:
+  - configMap
+  - downwardAPI
+  - emptyDir
+  - persistentVolumeClaim
+  - projected
+  - secret
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: nextcloud
+  namespace: {{ .Release.Namespace }}
+  annotations:
+    serviceaccounts.openshift.io/scc: {{ .Release.Namespace }}
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: system:openshift:scc:nextcloud
+rules:
+  - apiGroups:
+      - security.openshift.io
+    resources:
+      - securitycontextconstraints
+    resourceNames:
+      - nextcloud
+    verbs:
+      - use
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: nextcloud-scc
+  namespace: {{ .Release.Namespace }}
+subjects:
+  - kind: ServiceAccount
+    name: nextcloud
+    namespace: {{ .Release.Namespace }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:openshift:scc:nextcloud
+---
+{{- end }}
