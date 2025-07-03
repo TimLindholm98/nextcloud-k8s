@@ -1,7 +1,11 @@
 {{- with .Values.cloudnativepg }}
 {{- if .enabled }}
 ---
+{{- if .apiVersion }}{{/* This adds support for EnterpriseDB */}}
+apiVersion: {{ .apiVersion }}
+{{- else }}
 apiVersion: postgresql.cnpg.io/v1
+{{- end }}
 kind: Cluster
 metadata:
   name: {{ .databaseName }}
