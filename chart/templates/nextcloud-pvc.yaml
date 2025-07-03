@@ -9,7 +9,7 @@ spec:
   storageClassName: {{ .Values.nextcloud.storage.storageClass }}
   {{- end }}
   accessModes:
-    - ReadWriteOnce
+    - ReadWriteMany
   resources:
     requests:
       {{- if .Values.nextcloud.storage.size }}
