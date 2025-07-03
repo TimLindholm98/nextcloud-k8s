@@ -6,72 +6,14 @@ This Helm chart deploys a scalable and highly available Nextcloud instance on Ku
 
 This chart deploys a complete Nextcloud environment, including a custom Nextcloud PHP-FPM image, Nginx reverse proxy, and dependencies for caching, database, and object storage.
 
-### Architecture 
-
-### Features
-
--   **High Availability**: Supports multiple replicas for Nextcloud, Nginx, and a clustered PostgreSQL database via CloudNativePG.
--   **Scalable Storage**: Integrates with any S3-compatible object storage.
--   **Optimized Performance**: Uses Redis for caching/session management and includes optimized Nginx and PHP-FPM configurations.
--   **Automated TLS**: Manages SSL certificates with cert-manager.
--   **Collabora Online**: Optional integration for in-browser office document editing.
-
-## Prerequisites
-
--   **Kubernetes Cluster**: v1.20+
--   **Operators**: [cert-manager](https://cert-manager.io/), [CloudNativePG](https://cloudnative-pg.io/).
--   **Ingress Controller**: HAProxy, NGINX, or similar.
--   **S3-compatible Storage**: MinIO, AWS S3, etc.
-
-> [!NOTE]
-> **StorageClass**: If want multiple replicas of nextcloud that is not located on the same kubernetes worker. You need a storageclass that supports RWX with multiple writers. For example
-> - CephFS (rook)
-> - NFS
-
-## Installation
-
-1.  **Clone Repository**:
-    ```bash
-    # Clone the parent repository
-    git clone <repository-url>
-    cd nextcloud-k8s
-    ```
-
-2.  **Create Namespace**:
-    ```bash
-    kubectl apply -f namespace.yaml
-    ```
-
-3.  **Configure Secrets**:
-    This chart uses sealed secrets for managing sensitive data.
-    ```bash
-    # 1. Edit unsealed secrets in secrets/unsealed/
-    # 2. Seal them
-    ./seal-secrets.sh
-    # 3. Apply the sealed secrets
-    ./reapply-sealed-secrets.sh
-    ```
-
-4.  **Deploy Chart**:
-    ```bash
-    # Review and customize chart/values.yaml as needed
-    helm install nextcloud ./chart -n nextcloud
-    ```
-
-5.  **Access Nextcloud**:
-    Access your instance at the domain specified in `values.yaml` (default: `nextcloud.local`).
-
-## Configuration
-
-Configuration is managed through `chart/values.yaml` and a Kubernetes secret.
-
 ### Helm Values (`values.yaml`)
 
-- `nextcloudDomain`: The primary domain for Nextcloud.
+- `nextcloudDomain`: The domain for Nextcloud.
 - `nextcloudImageTag`, `nginxImageTag`: Docker image tags for the services.
-- `nextcloud.replicaCount`: Set to `1` for single-node, `>1` for HA.
-- `cloudnativepg.enabled`, `redis.enabled`, `collabora.enabled`: Toggle dependencies.
+- `nextcloud.replicaCount`: Set to `1` for single-node, `>1` for Multiple replicas.
+- `cloudnativepg.enabled` Disable if you want to configure your own.
 - `cloudnativepg.cluster`: Set to `true` for a 3-node database cluster.
+- `redis.enabled` Disable if you want to deploy your own instance
 
 ### Environment Variables (`nextcloud-env` Secret)
 
@@ -102,6 +44,11 @@ stringData:
   # Dont change this
   NEXTCLOUD_DIRECTORY: /var/www/html
   DATA_DIRECTORY: /mnt/ncdata
+  # If you have disabled cloudnativepg you need to configure these manually
+  # POSTGRES_HOST
+  # POSTGRES_PORT
+  # POSTGRES_USER
+  # POSTGRES_DB
 ```
 
 ## Maintenance
@@ -122,7 +69,7 @@ kubectl exec -it nextcloud-1 -n nextcloud -- psql -U nextcloud
 ```
 
 > [!TIP]
-> If you are using cloudnative-pg add this part to your nextcloud config.php manually
+> If you are using cloudnative-pg and a cluster add this part to your nextcloud config.php manually
 > https://docs.nextcloud.com/server/latest/admin_manual/configuration_database/replication.html
 > ```
 > 'dbreplica' => [
@@ -135,9 +82,115 @@ kubectl exec -it nextcloud-1 -n nextcloud -- psql -U nextcloud
 >  ],
 > ```
 
-## Troubleshooting
 
-- **Installation Fails**: Check logs of the `check-db-ready` and `check-s3-access` init containers in the Nextcloud pod.
-- **Permission Errors**: Set `rootNeededForDirectoryFix: true` in `values.yaml` if the PVC has restrictive permissions.
-- **Database Connection**: Check the status of the CloudNativePG cluster: `kubectl get cluster nextcloud -n nextcloud -o yaml`.
-- **Redis Connection**: Test connectivity with `kubectl exec -it deployment/redis -n nextcloud -- redis-cli ping`.
+## Values
+
+The following table lists the configurable parameters of the Nextcloud chart and their default values:
+
+### Core Configuration
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `nextcloudDomain` | The domain name for Nextcloud | `&nextcloudDomain nextcloud.local` |
+| `nextcloudImageTag` | Docker image tag for Nextcloud PHP-FPM | `20250629-1552` |
+| `nginxImageTag` | Docker image tag for Nginx reverse proxy | `20250629-1552` |
+| `nextcloud.trustedDomains` | List of trusted domains for Nextcloud | `[*nextcloud.local, localhost]` |
+
+### Nextcloud Configuration
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `nextcloud.trustedProxies` | List of trusted proxy networks | `[10.0.0.0/24]` |
+| `nextcloud.replicaCount` | Number of Nextcloud pod replicas | `1` |
+| `nextcloud.storage.storageClass` | Storage class for Nextcloud persistent volume | `""` |
+| `nextcloud.storage.size` | Size of Nextcloud persistent volume | `10Gi` |
+| `nextcloud.resources.requests.cpu` | CPU request for Nextcloud pods | `300m` |
+| `nextcloud.resources.requests.memory` | Memory request for Nextcloud pods | `512Mi` |
+| `nextcloud.resources.limits.cpu` | CPU limit for Nextcloud pods | `1500m` |
+| `nextcloud.resources.limits.memory` | Memory limit for Nextcloud pods | `1Gi` |
+
+### Ingress Configuration
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `nextcloud.ingress.enabled` | Enable ingress for Nextcloud | `true` |
+| `nextcloud.ingress.annotations` | Annotations for the ingress resource | `{}` |
+| `nextcloud.ingress.tlsSecretName` | Name of the TLS secret for HTTPS | `""` |
+
+### Database Configuration (CloudNativePG)
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `cloudnativepg.enabled` | Enable CloudNativePG database | `true` |
+| `cloudnativepg.cluster` | Enable 3-node PostgreSQL cluster | `true` |
+| `cloudnativepg.databaseName` | Database name | `db` |
+| `cloudnativepg.databaseUser` | Database username | `nextcloud` |
+| `cloudnativepg.storage.storageClass` | Storage class for database | `database` |
+| `cloudnativepg.storage.size` | Size of database persistent volume | `10Gi` |
+
+### Redis Configuration
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `redis.enabled` | Enable Redis deployment | `true` |
+| `redis.persistence` | Enable persistence for Redis | `false` |
+
+### Example Values Override
+
+```yaml
+# Custom domain and image tags
+nextcloudDomain: my-nextcloud.example.com
+nextcloudImageTag: latest
+nginxImageTag: latest
+
+# Scale to multiple replicas
+nextcloud:
+  replicaCount: 3
+  trustedDomains:
+    - my-nextcloud.example.com
+    - internal.example.com
+  trustedProxies:
+    - 10.0.0.0/8
+    - 172.16.0.0/12
+  
+  # Custom storage configuration
+  storage:
+    storageClass: fast-ssd
+    size: 50Gi
+  
+  # Resource limits for production
+  resources:
+    requests:
+      cpu: "500m"
+      memory: "1Gi"
+    limits:
+      cpu: "2000m"
+      memory: "2Gi"
+  
+  # Ingress with TLS
+  ingress:
+    enabled: true
+    annotations:
+      cert-manager.io/cluster-issuer: letsencrypt-prod
+      nginx.ingress.kubernetes.io/proxy-body-size: "0"
+    tlsSecretName: nextcloud-tls
+
+# Database configuration
+cloudnativepg:
+  enabled: true
+  cluster: true
+  storage:
+    storageClass: database-ssd
+    size: 100Gi
+
+# Redis configuration
+redis:
+  enabled: true
+  persistence: true
+```
+
+> [!NOTE]
+> When scaling `nextcloud.replicaCount` beyond 1, Redis is required for session handling. Ensure Redis is enabled and properly configured via the `nextcloud-env` secret.
+
+> [!IMPORTANT]
+> External service credentials (S3, Redis) must be configured in the `nextcloud-env` secret as described in the Environment Variables section above.

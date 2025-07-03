@@ -25,8 +25,23 @@ This project provides a simplified solution for deploying Nextcloud on Kubernete
 1. Check php version compatiblity.
 2. Use the nextcloud updater in the GUI or the `occ` command as you would in a manual install.
 
+## Prerequisites
+
+-   **Operators**: 
+    -   [CloudNativePG](https://cloudnative-pg.io/). *Required*
+    -   [cert-manager](https://cert-manager.io/) *Optional, but higly recomended*
+    -   [Sealed Secrets](https://github.com/bitnami-labs/sealed-secrets) *Optional*
+-   **Ingress Controller**: HAProxy, NGINX, or similar are recomended if you are going to use collabora.
+-   **S3-compatible Storage**: 
+    -   Tested with MinIO.
+
+> [!IMPORTANT]
+> **StorageClass**: If you want multiple replicas of nextcloud that is not located on the same kubernetes worker. You need a storageclass that supports RWX with multiple writers. For example
+> - CephFS (rook)
+> - NFS
+
 ## 📖 Documentation
 
-- **[Helm Chart Documentation](chart/README.md)** - Complete guide for deploying Nextcloud on Kubernetes using Helm
+- **[Helm Chart Documentation](chart/README.md)** - Details about the helm chart
 
-- **[Docker Image Documentation](image/README.md)** - Details about the custom Docker images.
+- **[Docker Image Documentation](image/README.md)** - Details about the custom Docker image.

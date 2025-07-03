@@ -4,9 +4,9 @@ This directory contains the files and configuration needed to build the custom D
 
 ## Overview
 
-The primary Docker image is a customized version of the official `php:8.3-fpm-alpine` image. It is tailored specifically for this Nextcloud deployment, including all necessary PHP extensions, optimized configurations, and an installation script that automates setup within a Kubernetes environment.
+The primary Docker image is a customized version of the official `php:8.3-fpm-alpine` image. It is tailored specifically for this Nextcloud deployment, including all necessary PHP extensions, configurations, and an installation script that automates setup.
 
-A separate Nginx image is also built to act as a reverse proxy for the Nextcloud PHP-FPM service.
+A separate Nginx image is also built to act as a reverse proxy for the Nextcloud PHP-FPM service, this is 
 
 ### Features
 
