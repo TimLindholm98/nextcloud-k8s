@@ -99,7 +99,7 @@ RUN set -ex; \
 RUN sed -i 's/^pm.max_children =.*/pm.max_children = 2500/' /usr/local/etc/php-fpm.d/www.conf; \
     sed -i 's|access.log = /proc/self/fd/2|access.log = /proc/self/fd/1|' /usr/local/etc/php-fpm.d/docker.conf
 
-RUN apk add --no-cache jq
+RUN apk add --no-cache jq pv
 
 ENV DATA_DIRECTORY=/mnt/ncdata
 ENV NEXTCLOUD_DIRECTORY=/var/www/html

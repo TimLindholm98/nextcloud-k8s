@@ -94,7 +94,11 @@ download_and_unpack_nextcloud() {
         "https://download.nextcloud.com/server/releases/nextcloud-${NEXTCLOUD_VERSION}.tar.bz2"
 
     echo "Unpacking the Nextcloud tarball to ${UNPACK_DIR}"
-    tar -xjf /tmp/nextcloud.tar.bz2 -C ${UNPACK_DIR} --strip-components=1 && rm /tmp/nextcloud.tar.bz2
+    # pv <some .tar.gz file> | tar -xvzf - -C <some directory>
+    pv /tmp/nextcloud.tar.bz2 | tar -xvzf - -C ${UNPACK_DIR} --strip-components=1
+    echo "Done unpacking, removing tarball"
+    rm /tmp/nextcloud.tar.bz2
+    #tar -xjf /tmp/nextcloud.tar.bz2 -C ${UNPACK_DIR} --strip-components=1 && rm /tmp/nextcloud.tar.bz2
 
     chmod +x ${NEXTCLOUD_DIRECTORY}/occ
 }
@@ -112,9 +116,11 @@ install_nextcloud() {
 
   # As kubernetes pvc is used, we can disable the check_data_directory_permissions.
   sed -i "/^);$/i\\  'check_data_directory_permissions' => false," ${NEXTCLOUD_DIRECTORY}/config/config.php
+  echo "Installed Nextcloud"
 }
 
 configure_nextcloud() {
+  echo "Configuring Nextcloud settings"
   # Trusted domains
   get_config_value() {
     php /var/www/html/occ config:system:get $1
