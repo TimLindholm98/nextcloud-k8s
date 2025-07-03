@@ -19,7 +19,7 @@ spec:
               service:
                 name: nginx
                 port:
-                  number: 80
+                  number: 8080
   {{ if .Values.nextcloud.ingress.tlsSecretName }}
   tls:
     - hosts:
