@@ -30,6 +30,8 @@ nginx:
 
 # Required values
 nextcloudDomain: &nextcloudDomain nextcloud.local
+nextcloudImage: timpa0130/nextcloud-k8s
+nginxImage: timpa0130/nextcloud-k8s-nginx
 nextcloudImageTag: 20250629-1552
 nginxImageTag: 20250629-1552
 

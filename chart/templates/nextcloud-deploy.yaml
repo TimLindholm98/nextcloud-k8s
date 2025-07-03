@@ -70,7 +70,7 @@ spec:
               done',
             ]
         - name: nextcloud-directory-fix
-          image: timpa0130/nextcloud-k8s:{{ .Values.nextcloudImageTag}}
+          image: {{ .Values.nextcloudImage }}:{{ .Values.nextcloudImageTag}}
           imagePullPolicy: IfNotPresent
           resources:
             requests:
@@ -90,7 +90,7 @@ spec:
               mountPath: /data
       containers:
         - name: nextcloud
-          image: timpa0130/nextcloud-k8s:{{ .Values.nextcloudImageTag}}
+          image: {{ .Values.nextcloudImage }}:{{ .Values.nextcloudImageTag}}
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 9000

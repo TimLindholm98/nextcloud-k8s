@@ -29,7 +29,7 @@ spec:
         fsGroup: 33
       containers:
         - name: nginx
-          image: timpa0130/nextcloud-k8s-nginx:{{ .Values.nginxImageTag}}
+          image: {{ .Values.nginxImage }}:{{ .Values.nginxImageTag}}
           ports:
             - containerPort: 80
               name: nginx
