@@ -18,7 +18,7 @@ This project provides a simplified solution for deploying Nextcloud on Kubernete
 > [!NOTE]
 > If there is a good way to upgrade in a k8s native way we could impliment it.
 >
-> But I would like to avoid creating extra complexity, nextcloud is not really built with kuberntetes in mind so all the soloutions i can think are to complex for not that much improvment
+> But I would like to avoid creating extra complexity, nextcloud is not really built with kuberntetes in mind so all the soloutions i can think of are to complex for not that much improvment
 
 ## How to uppgrade
 
