@@ -14,20 +14,22 @@ NEXTCLOUD_ADMIN_USER \
 NEXTCLOUD_ADMIN_PASSWORD \
 TRUSTED_DOMAINS \
 TRUSTED_PROXIES \
+DATA_DIRECTORY \
+NEXTCLOUD_DIRECTORY"
+
+OBJECTSTORE_VARS="\
 OBJECTSTORE_HOST \
 OBJECTSTORE_PORT \
 OBJECTSTORE_BUCKET \
 OBJECTSTORE_KEY \
-OBJECTSTORE_SECRET \
-DATA_DIRECTORY \
-NEXTCLOUD_DIRECTORY"
+OBJECTSTORE_SECRET"
 
 check_required_environment_variables() {  
     for var in "$@" ; do
         # Use eval to get the value of the variable whose name is in $var
         eval "value=\$$var"
         if [ -z "$value" ]; then
-            echo "ERROR: ${var} is not set"
+            echo "ERROR: ${var} is not set and is required"
             exit 1
         fi
     done
@@ -121,10 +123,8 @@ install_nextcloud() {
 
 configure_nextcloud() {
   echo "Configuring Nextcloud settings"
+
   # Trusted domains
-  get_config_value() {
-    php /var/www/html/occ config:system:get $1
-  }
   index=0
   for domain in $TRUSTED_DOMAINS; do
     index=$(expr $index + 1)
@@ -141,17 +141,32 @@ configure_nextcloud() {
   done
 
   # S3 configuration
-  echo "Setting S3 configuration"
-  php /var/www/html/occ config:system:set objectstore class --value='\OC\Files\ObjectStore\S3'
-  php /var/www/html/occ config:system:set objectstore arguments hostname --value=${OBJECTSTORE_HOST}
-  php /var/www/html/occ config:system:set objectstore arguments port --value=${OBJECTSTORE_PORT}
-  php /var/www/html/occ config:system:set objectstore arguments bucket --value=${OBJECTSTORE_BUCKET}
-  php /var/www/html/occ config:system:set objectstore arguments key --value=${OBJECTSTORE_KEY}
-  php /var/www/html/occ config:system:set objectstore arguments secret --value=${OBJECTSTORE_SECRET}
-  php /var/www/html/occ config:system:set objectstore arguments use_path_style --type=bool --value=true
-  php /var/www/html/occ config:system:set objectstore arguments use_ssl --type=bool --value=false
-  php /var/www/html/occ config:system:set objectstore arguments concurrency --value='10'
+  object_storage_configured=false
+  for var in $OBJECTSTORE_VARS; do
+    if [ -n "${!var}" ]; then
+      object_storage_configured=true
+      break
+    fi
+  done
+  if [ "$object_storage_configured" = true ]; then
+    for var in $OBJECTSTORE_VARS; do
+      if [ -z "${!var}" ]; then
+        echo -e "ERROR: $var is not set and is required to configure object storage\nYou must set all of the following environment variables: $OBJECTSTORE_VARS"
+        exit 1
+      fi
+    done
 
+    echo "Setting S3 configuration"
+    php /var/www/html/occ config:system:set objectstore class --value='\OC\Files\ObjectStore\S3'
+    php /var/www/html/occ config:system:set objectstore arguments hostname --value=${OBJECTSTORE_HOST}
+    php /var/www/html/occ config:system:set objectstore arguments port --value=${OBJECTSTORE_PORT}
+    php /var/www/html/occ config:system:set objectstore arguments bucket --value=${OBJECTSTORE_BUCKET}
+    php /var/www/html/occ config:system:set objectstore arguments key --value=${OBJECTSTORE_KEY}
+    php /var/www/html/occ config:system:set objectstore arguments secret --value=${OBJECTSTORE_SECRET}
+    php /var/www/html/occ config:system:set objectstore arguments use_path_style --type=bool --value=true
+    php /var/www/html/occ config:system:set objectstore arguments use_ssl --type=bool --value=false
+    php /var/www/html/occ config:system:set objectstore arguments concurrency --value='10'
+  fi
 
   # Redis configuration
   echo "Setting Redis configuration"
@@ -168,7 +183,7 @@ configure_nextcloud() {
 
   # Trying to decrase the security warnings in browser
   echo "Setting overwriteprotocol to https"
-  php ${NEXTCLOUD_DIRECTORY}/occ config:system:set overwriteprotocol --value='https'  
+  php ${NEXTCLOUD_DIRECTORY}/occ config:system:set overwriteprotocol --value='https'
 
 }
 
