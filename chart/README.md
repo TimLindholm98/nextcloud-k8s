@@ -91,23 +91,29 @@ The following table lists the configurable parameters of the Nextcloud chart and
 
 | Parameter | Description | Default |
 |-----------|-------------|---------|
-| `nextcloudDomain` | The domain name for Nextcloud | `&nextcloudDomain nextcloud.local` |
-| `nextcloudImageTag` | Docker image tag for Nextcloud PHP-FPM | `20250629-1552` |
+| `nextcloudDomain` | The domain name for Nextcloud | `nextcloud.local` |
+| `nextcloudImage` | Docker image for Nextcloud PHP-FPM | `timpa0130/nextcloud-k8s` |
+| `nginxImage` | Docker image for Nginx reverse proxy | `timpa0130/nextcloud-k8s-nginx` |
+| `nextcloudImageTag` | Docker image tag for Nextcloud PHP-FPM | `20250707-1606` |
 | `nginxImageTag` | Docker image tag for Nginx reverse proxy | `20250629-1552` |
-| `nextcloud.trustedDomains` | List of trusted domains for Nextcloud | `[*nextcloud.local, localhost]` |
+| `openshiftCompatibility` | Enable OpenShift compatibility features | `false` |
 
 ### Nextcloud Configuration
 
 | Parameter | Description | Default |
 |-----------|-------------|---------|
+| `nextcloud.objectStorage` | Enable object storage configuration | `false` |
+| `nextcloud.annotations` | Annotations for Nextcloud pods | `{}` |
+| `nextcloud.trustedDomains` | List of trusted domains for Nextcloud | `[nextcloud.local, localhost]` |
 | `nextcloud.trustedProxies` | List of trusted proxy networks | `[10.0.0.0/24]` |
 | `nextcloud.replicaCount` | Number of Nextcloud pod replicas | `1` |
 | `nextcloud.storage.storageClass` | Storage class for Nextcloud persistent volume | `""` |
+| `nextcloud.storage.accessMode` | Access mode for Nextcloud persistent volume | `ReadWriteMany` |
 | `nextcloud.storage.size` | Size of Nextcloud persistent volume | `10Gi` |
 | `nextcloud.resources.requests.cpu` | CPU request for Nextcloud pods | `300m` |
 | `nextcloud.resources.requests.memory` | Memory request for Nextcloud pods | `512Mi` |
 | `nextcloud.resources.limits.cpu` | CPU limit for Nextcloud pods | `1500m` |
-| `nextcloud.resources.limits.memory` | Memory limit for Nextcloud pods | `1Gi` |
+| `nextcloud.resources.limits.memory` | Memory limit for Nextcloud pods | `1024Mi` |
 
 ### Ingress Configuration
 
@@ -117,6 +123,12 @@ The following table lists the configurable parameters of the Nextcloud chart and
 | `nextcloud.ingress.annotations` | Annotations for the ingress resource | `{}` |
 | `nextcloud.ingress.tlsSecretName` | Name of the TLS secret for HTTPS | `""` |
 
+### Nginx Configuration
+
+| Parameter | Description | Default |
+|-----------|-------------|---------|
+| `nginx.annotations` | Annotations for Nginx pods | `{}` |
+
 ### Database Configuration (CloudNativePG)
 
 | Parameter | Description | Default |
@@ -125,7 +137,8 @@ The following table lists the configurable parameters of the Nextcloud chart and
 | `cloudnativepg.cluster` | Enable 3-node PostgreSQL cluster | `true` |
 | `cloudnativepg.databaseName` | Database name | `db` |
 | `cloudnativepg.databaseUser` | Database username | `nextcloud` |
-| `cloudnativepg.storage.storageClass` | Storage class for database | `database` |
+| `cloudnativepg.annotations` | Annotations for CloudNativePG cluster | `{}` |
+| `cloudnativepg.storage.storageClass` | Storage class for database | `""` |
 | `cloudnativepg.storage.size` | Size of database persistent volume | `10Gi` |
 
 ### Redis Configuration
@@ -138,13 +151,23 @@ The following table lists the configurable parameters of the Nextcloud chart and
 ### Example Values Override
 
 ```yaml
-# Custom domain and image tags
+# Custom domain and image configuration
 nextcloudDomain: my-nextcloud.example.com
+nextcloudImage: my-registry/nextcloud-k8s
+nginxImage: my-registry/nextcloud-k8s-nginx
 nextcloudImageTag: latest
 nginxImageTag: latest
 
-# Scale to multiple replicas
+# OpenShift compatibility
+openshiftCompatibility: true
+
+# Nextcloud configuration
 nextcloud:
+  objectStorage: true
+  annotations:
+    my-annotation: "value"
+  
+  # Scale to multiple replicas
   replicaCount: 3
   trustedDomains:
     - my-nextcloud.example.com
@@ -156,6 +179,7 @@ nextcloud:
   # Custom storage configuration
   storage:
     storageClass: fast-ssd
+    accessMode: ReadWriteMany
     size: 50Gi
   
   # Resource limits for production
@@ -175,10 +199,17 @@ nextcloud:
       nginx.ingress.kubernetes.io/proxy-body-size: "0"
     tlsSecretName: nextcloud-tls
 
+# Nginx configuration
+nginx:
+  annotations:
+    my-nginx-annotation: "value"
+
 # Database configuration
 cloudnativepg:
   enabled: true
   cluster: true
+  annotations:
+    my-db-annotation: "value"
   storage:
     storageClass: database-ssd
     size: 100Gi
@@ -193,4 +224,4 @@ redis:
 > When scaling `nextcloud.replicaCount` beyond 1, Redis is required for session handling. Ensure Redis is enabled and properly configured via the `nextcloud-env` secret.
 
 > [!IMPORTANT]
-> External service credentials (S3, Redis) must be configured in the `nextcloud-env` secret as described in the Environment Variables section above.
+> External service credentials (S3, Redis, Database) must be configured in the `nextcloud-env` secret as described in the Environment Variables section above. When `nextcloud.objectStorage` is enabled, S3 credentials are required.
