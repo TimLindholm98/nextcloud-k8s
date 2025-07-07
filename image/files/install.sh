@@ -143,14 +143,16 @@ configure_nextcloud() {
   # S3 configuration
   object_storage_configured=false
   for var in $OBJECTSTORE_VARS; do
-    if [ -n "${!var}" ]; then
+    eval "value=\$$var"
+    if [ -n "$value" ]; then
       object_storage_configured=true
       break
     fi
   done
   if [ "$object_storage_configured" = true ]; then
     for var in $OBJECTSTORE_VARS; do
-      if [ -z "${!var}" ]; then
+      eval "value=\$$var"
+      if [ -z "$value" ]; then
         echo -e "ERROR: $var is not set and is required to configure object storage\nYou must set all of the following environment variables: $OBJECTSTORE_VARS"
         exit 1
       fi

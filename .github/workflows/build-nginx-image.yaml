@@ -6,6 +6,8 @@ on:
     paths:
       #- chart/templates/nginx-deploy.yaml
       - .github/workflows/build-nginx-image.yaml
+      - image/files/install.sh
+      - image/Dockerfile
 
 env:
   NGINX_IMAGE: timpa0130/nextcloud-k8s-nginx
