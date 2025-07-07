@@ -40,6 +40,7 @@ openshiftCompatibility: false
 
 # Nextcloud configuration
 nextcloud:
+  objectStorage: false
   annotations: {}
   # Replaces the trusted_domains in the nextcloud config.php
   trustedDomains: # Required

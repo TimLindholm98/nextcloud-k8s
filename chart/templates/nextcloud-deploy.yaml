@@ -47,6 +47,7 @@ spec:
             ]
           env: 
             {{ include "postgresEnv" . | nindent 12 }}
+        {{- if .Values.nextcloud.objectStorage }}
         - name: check-s3-access
           image: minio/mc:latest
           resources:
@@ -69,6 +70,7 @@ spec:
               sleep 5;
               done',
             ]
+        {{- end }}
         - name: nextcloud-directory-fix
           image: {{ .Values.nextcloudImage }}:{{ .Values.nextcloudImageTag}}
           imagePullPolicy: IfNotPresent
