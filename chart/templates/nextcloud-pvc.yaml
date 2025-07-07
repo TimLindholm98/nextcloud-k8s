@@ -10,7 +10,7 @@ spec:
   {{- end }}
   {{- if .Values.nextcloud.storage.accessMode }}
   accessModes:
-    {{- toYaml .Values.nextcloud.storage.accessMode | nindent 4 }}
+    - {{ .Values.nextcloud.storage.accessMode }}
   {{- else }}
   accessModes:
     - ReadWriteMany
