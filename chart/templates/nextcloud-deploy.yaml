@@ -104,7 +104,9 @@ spec:
           env:
             {{ include "redisEnv" . | nindent 12 }}
             {{ include "postgresEnv" . | nindent 12 }}
+            {{- if .Values.nextcloud.objectStorage }}
             {{ include "objectstoreEnv" . | nindent 12 }}
+            {{- end }}
             {{ include "nextcloudDirectories" . | nindent 12 }}
             {{ include "nextcloudCredentials" . | nindent 12 }}
             {{ include "trustedDomains" . | nindent 12 }}
