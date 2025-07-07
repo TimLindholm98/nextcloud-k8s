@@ -8,9 +8,9 @@ spec:
   {{- if .Values.nextcloud.storage.storageClass }}
   storageClassName: {{ .Values.nextcloud.storage.storageClass }}
   {{- end }}
-  {{- if .Values.nextcloud.storage.accessModes }}
+  {{- if .Values.nextcloud.storage.accessMode }}
   accessModes:
-    {{- toYaml .Values.nextcloud.storage.accessModes | nindent 4 }}
+    {{- toYaml .Values.nextcloud.storage.accessMode | nindent 4 }}
   {{- else }}
   accessModes:
     - ReadWriteMany
