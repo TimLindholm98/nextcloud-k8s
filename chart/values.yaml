@@ -40,6 +40,9 @@ openshiftCompatibility: false
 
 # Nextcloud configuration
 nextcloud:
+  caCertificates:
+    enabled: false
+    configMapName: ca-bundle
   objectStorage: false
   annotations: {}
   # Replaces the trusted_domains in the nextcloud config.php
