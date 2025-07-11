@@ -127,7 +127,7 @@ spec:
             {{- end }}
             {{- if .Values.nextcloud.caCertificates.enabled }}
             - name: ca-bundle
-              mountPath: /etc/ssl/certs/ca-bundle.crt
+              mountPath: /etc/ssl/certs/ca-certificates.crt
               subPath: ca-bundle.crt
             {{- end }}
       volumes:
