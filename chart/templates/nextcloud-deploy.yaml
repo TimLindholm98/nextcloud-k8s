@@ -125,6 +125,11 @@ spec:
               mountPath: /usr/local/etc/php/conf.d/custom-{{ base $path }}
               subPath: {{ base $path }}
             {{- end }}
+            {{- if .Values.nextcloud.caCertificates.enabled }}
+            - name: ca-bundle
+              mountPath: /etc/ssl/certs/ca-bundle.crt
+              subPath: ca-bundle.crt
+            {{- end }}
       volumes:
         - name: nextcloud-data
           persistentVolumeClaim:
@@ -133,3 +138,9 @@ spec:
           configMap:
             name: nextcloud-php-config
             defaultMode: 420
+        {{- if .Values.nextcloud.caCertificates.enabled }}
+        - name: ca-bundle
+          configMap:
+            name: {{ .Values.nextcloud.caCertificates.configMapName }}
+            defaultMode: 420
+        {{- end }}
