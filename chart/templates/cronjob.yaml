@@ -1,0 +1,55 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: cronjob
+  namespace: {{ .Release.Namespace }}
+spec:
+  schedule: "*/5  *  *  *  *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: cronjob
+            image: {{ .Values.nextcloudImage }}:{{ .Values.nextcloudImageTag }}
+            imagePullPolicy: IfNotPresent
+            command:
+            - /bin/sh
+            - -c
+            - |
+              php -f /var/www/html/occ status -e && \
+              php -f /var/www/html/cron.php
+            volumeMounts:
+              {{/* Folders with persistent data */}}
+              - name: nextcloud-data
+                mountPath: /mnt/ncdata
+                subPath: ncdata
+              - name: nextcloud-data
+                mountPath: /var/www/html
+                subPath: html
+              {{/* php config files */}}
+              {{- range $path, $content := .Files.Glob "files/php-config/*" }}
+              - name: nextcloud-php-config
+                mountPath: /usr/local/etc/php/conf.d/custom-{{ base $path }}
+                subPath: {{ base $path }}
+              {{- end }}
+              {{- if .Values.nextcloud.caCertificates.enabled }}
+              - name: ca-bundle
+                mountPath: /etc/ssl/certs/ca-certificates.crt
+                subPath: ca-bundle.crt
+              {{- end }}
+          volumes:
+            - name: nextcloud-data
+              persistentVolumeClaim:
+                claimName: nextcloud-data
+            - name: nextcloud-php-config
+              configMap:
+                name: nextcloud-php-config
+                defaultMode: 420
+            {{- if .Values.nextcloud.caCertificates.enabled }}
+            - name: ca-bundle
+              configMap:
+                name: {{ .Values.nextcloud.caCertificates.configMapName }}
+                defaultMode: 420
+            {{- end }}
+          restartPolicy: Never
