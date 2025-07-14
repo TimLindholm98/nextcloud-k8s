@@ -1,7 +1,7 @@
 apiVersion: batch/v1
 kind: CronJob
 metadata:
-  name: cronjob
+  name: cron-php
   namespace: {{ .Release.Namespace }}
 spec:
   schedule: "*/5  *  *  *  *"
@@ -9,8 +9,14 @@ spec:
     spec:
       template:
         spec:
+          concurrencyPolicy: Forbid
+          restartPolicy: Never
+          securityContext:
+            runAsUser: 33
+            runAsGroup: 33
+            fsGroup: 33
           containers:
-          - name: cronjob
+          - name: cron-php
             image: {{ .Values.nextcloudImage }}:{{ .Values.nextcloudImageTag }}
             imagePullPolicy: IfNotPresent
             command:
@@ -52,4 +58,3 @@ spec:
                 name: {{ .Values.nextcloud.caCertificates.configMapName }}
                 defaultMode: 420
             {{- end }}
-          restartPolicy: Never
