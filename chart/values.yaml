@@ -10,7 +10,7 @@ cloudnativepg:
   enabled: true
   cluster: true
   backup:
-    enabled: true
+    enabled: false
     destinationPath: backup
     endpointURL: ""
     credentials:
