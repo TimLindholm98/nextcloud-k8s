@@ -9,6 +9,17 @@
 cloudnativepg:
   enabled: true
   cluster: true
+  backup:
+    enabled: true
+    destinationPath: backup
+    endpointURL: ""
+    credentials:
+      name: nextcloud-env
+      accessKeyKey: OBJECTSTORE_KEY
+      secretAccessKey: OBJECTSTORE_SECRET
+    endpointCA:
+      name: bundled-ca-bundle
+      key: ca-bundle.crt
   databaseName: db
   databaseUser: nextcloud
   annotations: {}

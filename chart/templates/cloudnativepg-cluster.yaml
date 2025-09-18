@@ -49,7 +49,23 @@ spec:
       database: {{ .databaseName }}
       owner: {{ .databaseUser }}
   {{- end }}
-
+  {{- if .backup.enabled }}
+  backup:
+    retentionPolicy: "30d"
+    barmanObjectStore:
+      destinationPath: {{ .backup.destinationPath | default "backup" }}
+      endpointURL: {{ .backup.endpointURL }}
+      endpointCA:
+        name: {{ .backup.endpointCA.name | default "bundled-ca-bundle" }}
+        key: {{ .backup.endpointCA.key | default "ca-bundle.crt" }}
+      s3Credentials:
+        accessKeyId:
+          name: {{  .backup.credentials.name | default "nextcloud-env" }}
+          key: {{ .backup.credentials.accessKeyKey | default "OBJECTSTORE_KEY" }}
+        secretAccessKey:
+          name: {{ .backup.credentials.name | default "nextcloud-env" }}
+          key: {{ .backup.credentials.secretAccessKey | default "OBJECTSTORE_SECRET" }}
+  {{- end }}
 ---
 {{- end }}
 {{- end }}
