@@ -67,5 +67,57 @@ spec:
           key: {{ .backup.credentials.secretAccessKey | default "OBJECTSTORE_SECRET" }}
   {{- end }}
 ---
+{{- if .backup.enabled }}
+# Role for CloudNative-PG cluster to access secrets
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ .databaseName }}-secret-read
+  namespace: {{ $.Release.Namespace }}
+rules:
+- apiGroups: [""]
+  resources: ["secrets"]
+  resourceNames: 
+    - {{ .backup.endpointCA.name | default "bundled-ca-bundle" }}
+    {{- if .backup.enabled }}
+    - {{ .backup.credentials.name | default "nextcloud-env" }}
+    {{- end }}
+  verbs: ["get", "list", "watch"]
+---
+# RoleBinding for CloudNative-PG cluster service account
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ .databaseName }}-secret-read
+  namespace: {{ $.Release.Namespace }}
+subjects:
+- kind: ServiceAccount
+  name: {{ .databaseName }}
+  namespace: {{ $.Release.Namespace }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ .databaseName }}-secret-read
+---
+# This is used to create a first time backup of the database,
+# It will create the "First Point of Recoverability".
+apiVersion: postgresql.k8s.enterprisedb.io/v1
+kind: Backup
+metadata:
+  name: {{ .Values.edb.cluster.name }}-backup
+spec:
+  cluster:
+    name: {{ .Values.edb.cluster.name }}
+---
+apiVersion: postgresql.k8s.enterprisedb.io/v1
+kind: ScheduledBackup
+metadata:
+  name: {{ .databaseName }}-scheduled-backup
+spec:
+  schedule: "0 0 * * *"
+  cluster:
+    name: {{ .databaseName }}
+---
+{{- end }}
 {{- end }}
 {{- end }}
