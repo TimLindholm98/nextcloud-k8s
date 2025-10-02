@@ -5,11 +5,11 @@ metadata:
   namespace: {{ .Release.Namespace }}
 spec:
   schedule: "*/5  *  *  *  *"
+  concurrencyPolicy: Forbid
   jobTemplate:
     spec:
       template:
         spec:
-          concurrencyPolicy: Forbid
           restartPolicy: Never
           {{- if .Values.openshiftCompatibility }}
           serviceAccountName: nextcloud
